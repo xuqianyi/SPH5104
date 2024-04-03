@@ -12,7 +12,7 @@ WITH icu_info AS (SELECT
         ORDER BY icu.intime )                                      AS icustay_id_order
     FROM physionet-data.mimiciv_icu.icustays icu
       JOIN physionet-data.mimiciv_hosp.patients pat ON icu.subject_id = pat.subject_id
-      JOIN physionet-data.mimiciv_derived.age age on icu.subject_id = age.subject_id
+      JOIN physionet-data.mimiciv_derived.age age ON icu.subject_id = age.subject_id AND icu.hadm_id=age.hadm_id
     WHERE icu.stay_id in (SElECT stay_id from physionet-data.mimiciv_derived.ventilation WHERE ventilation_status='InvasiveVent') 
     and icu.subject_id in (select distinct ce.subject_id
 from physionet-data.mimiciv_icu.chartevents ce, physionet-data.mimiciv_derived.bg bg
