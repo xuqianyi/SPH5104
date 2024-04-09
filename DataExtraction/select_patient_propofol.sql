@@ -40,6 +40,14 @@ icu_propofol AS(
       JOIN physionet-data.mimiciv_icu.inputevents ie ON icu.subject_id = ie.subject_id AND icu.hadm_id = ie.hadm_id AND icu.stay_id = ie.stay_id
 WHERE ie.itemid IN (226224, 227210, 222168) -- Propofol itemids
   AND ie.starttime >= TIMESTAMP_ADD(icu.intime, INTERVAL 8 HOUR) -- Starts after 8 hours of ICU intime
+  AND NOT EXISTS ( -- Ensure no use of other sedatives
+      SELECT 1
+      FROM physionet-data.mimiciv_icu.inputevents other_ie
+      WHERE other_ie.subject_id = icu.subject_id
+        AND other_ie.hadm_id = icu.hadm_id
+        AND other_ie.stay_id = icu.stay_id
+        AND other_ie.itemid IN (225150, 229420, 221668, 221385) -- Other sedatives itemids
+    )
 GROUP BY
         icu.subject_id,
         icu.hadm_id,
