@@ -1,0 +1,277 @@
+---
+title: "Descriptive Data and Bivariate Analysis"
+author: "Ou Yang Yu"
+date: "2024-04-14"
+output: html_document
+---
+
+## Intro
+
+This document provides the descriptive data and bivariate analysis for final dataset: cohort_w_confounders.csv.
+
+## Load Libraries
+
+```{r load-libraries}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(skimr)
+```
+
+## Read final dataset
+
+```{r read-dataset}
+### Read final dataset
+data <- read_csv("D:\\cohort_w_confounders.csv")
+```
+
+## Descriptive Data
+
+### Data Summary
+
+Descriptive data for all 40 variables are in Data Summary.
+
+```{r data-summary}
+### Data Summary
+data <- data %>%
+  mutate(across(c(subject_id, hadm_id, stay_id), as.character)
+         ) %>%
+  mutate(
+    across(c(delirium, surgical, neurological_condition, dementia), as.logical)
+  )
+
+skimr::skim(data)
+```
+
+### Mapping delirium 1 and 0 to Delirium and Non-delirium
+
+```{r map-delirium}
+### Mapping delirium 1 and 0 to Delirium and Non-delirium
+data_mod <- data %>%
+  mutate(delirium_status = ifelse(delirium == 1, "Delirium", "Non-delirium"),
+         delirium_status = as.factor(delirium_status))
+```
+
+### Proportion of Delirium Status in ICU Patients with ARDS (Pie Chart)
+
+Figure shows that out of a total of 3,862 patients, 1,289 patients (approx. 33.4%) were diagnosed with delirium during their ICU stay, while 2,573 patients (approx. 66.6%) did not develop delirium. The high incidence of delirium (1/3 of patients) suggests the need for monitoring strategies or protocols aimed at reducing the incidence and severity of delirium.
+
+```{r delirium-piechart}
+### Proportion of Delirium Status in ICU Patients with ARDS (Pie Chart)
+
+delirium_table <- table(data_mod$delirium_status)
+delirium_prop <- prop.table(delirium_table) # Proportion of cases with and without delirium
+
+# Prepare data for the pie chart
+data_pie <- as.data.frame(delirium_table)
+names(data_pie) <- c("delirium_status", "count")
+data_pie$prop <- delirium_prop * 100  # convert proportion to percentage
+
+# Creating the pie chart
+ggplot(data_pie, aes(x = "", y = prop, fill = delirium_status)) + 
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar(theta = "y") +  # This makes it a pie chart
+  theme_void() +  # Removes background and grid lines
+  labs(fill = "Delirium Status",
+       title = "Proportion of Delirium Status in ICU Patients with ARDS") +
+  geom_text(aes(label = paste(count, sprintf("(%.1f%%)", prop))), position = position_stack(vjust = 0.5))  # Adds text labels with count and percentage
+
+```
+
+### Histogram of Propofol Infusion Duration
+
+The histogram in Figure, which is right-skewed, shows that while most ARDS patients receive shorter durations of propofol infusion, a long tail indicates that some receive it for much longer. This suggests that, although shorter durations are typical, specific conditions or complications may necessitate longer durations. The histogram is tall and narrow, with most data clustered around the mean, yet it spans a wide range, indicating significant variability in infusion durations. Gaps at the extremes highlight the presence of outliers. Additionally, the histogram does not account for variations in medical need, such as ARDS severity, which may require longer sedation durations for more severe cases.
+
+```{r propofol-histogram}
+### Histogram of Propofol Infusion Duration
+
+# Calculate the 99th percentile of propofol infusion duration
+p99_duration <- quantile(data_mod$duration_hours, 0.99)
+
+# Calculate count and proportion of durations >= P99
+count_p99_duration <- sum(data_mod$duration_hours >= p99_duration)
+proportion_p99_duration <- count_p99_duration / nrow(data_mod)
+
+# Histogram of Propofol Infusion Duration with P99 indicator and annotations
+ggplot(data_mod, aes(x = duration_hours)) +
+  geom_histogram(bins = 30, fill = "#008080", color = "black") +
+  labs(title = "Histogram of Propofol Infusion Duration", x = "Propofol Infusion Duration (Hours)", y = "Frequency") +
+  geom_vline(aes(xintercept = p99_duration), color = "blue", linetype = "dashed", size = 1) +
+  geom_text(aes(x = p99_duration, y = Inf), 
+            label = sprintf("P99 = %.2f (Count: %d, Proportion: %.2f%%)", p99_duration, count_p99_duration, 100 * proportion_p99_duration),
+            vjust = 1.5, hjust = -0.01, color = "blue", size = 3)  # Add text label for P99 with count and proportion
+```
+
+## Bivariate Analysis
+
+The bivariate visualisation below serves a distinct purpose but collectively offers a comprehensive view of the central tendencies, variability, and relationships among factors such as age, ICU stay, delirium status, sedation duration, and disease severity in the ICU ARDS study population.
+
+### Box Plot of Age Distribution by Delirium Status
+
+Age may affect delirium risk in ARDS patients. According to the boxplot in Figure, the median age is slightly higher in the delirium group, suggesting that older patients are more prone to delirium. Both groups show similar box sizes, indicating low age variability within delirium and non-delirium patients. This implies that the risk of delirium does not vary significantly with age among those susceptible to ARDS, pointing to other factors like ARDS severity or propofol duration as potential influencers. Outliers below the whiskers in the delirium group, including notably young patients around 25 years old, suggest that there are exceptional cases where younger individuals develop delirium.
+
+```{r Age-Delirium}
+### Age Distribution by Delirium Status
+
+# Calculate the 99th percentile of age
+p99_age <- quantile(data_mod$age, 0.99)
+
+# Determine the count of cases at or above the 99th percentile
+count_p99_age <- sum(data_mod$age >= p99_age)
+
+# Calculate the proportion of cases at or above the 99th percentile
+proportion_p99_age <- count_p99_age / nrow(data_mod)
+
+# Box Plot of Age by Delirium Status with annotations for P99, median, and IQR
+ggplot(data_mod, aes(x = delirium_status, y = age, fill = delirium_status)) +
+  geom_boxplot() +
+  labs(title = "Age Distribution by Delirium Status", x = "Delirium Status", y = "Age") +
+  geom_hline(aes(yintercept = p99_age), color = "blue", linetype = "dashed", size = 1) +
+  geom_text(aes(x = 1.5, y = p99_age, 
+                label = sprintf("P99 = %d (Count: %d, Proportion: %.2f%%)", p99_age, count_p99_age, 100 * proportion_p99_age)),
+            color = "blue", vjust = -0.5, hjust = 0.5, size = 3) +  # Adjust size for smaller text
+  stat_summary(fun = median, geom = "text", aes(label = round(..y.., 1)), vjust = -0.5, hjust = 2, size = 3, color = "black") +
+  stat_summary(fun = quantile, fun.args = list(probs = c(0.25, 0.75)), geom = "text", aes(label = round(..y.., 1)), vjust = -0.5, hjust = 2, size = 3, color = "black")
+
+# Statistical Test
+t.test(age ~ delirium_status, data = data_mod)
+
+```
+
+### Box Plot of ICU Length of Stay by Delirium Status
+
+The boxplot in Figure shows that the delirium group has a higher median, indicating longer ICU stays on average. The taller box in the delirium group suggests greater variability in ICU lengths of stay. Additionally, points above the whiskers in both groups reveal many outliers with extended ICU stays.
+
+```{r icu-Delirium}
+### Box Plot of ICU Length of Stay by Delirium Status
+
+# Calculate the 99th percentile of ICU Length of Stay
+p99_los <- quantile(data_mod$icu_length_of_stay_day, 0.99)
+
+# Calculate count and proportion of ICU Length of Stay >= P99
+count_p99_los <- sum(data_mod$icu_length_of_stay_day >= p99_los)
+proportion_p99_los <- count_p99_los / nrow(data_mod)
+
+# Box plot
+ggplot(data_mod, aes(x = delirium_status, y = icu_length_of_stay_day)) +
+  geom_boxplot(aes(fill = delirium_status)) +
+  labs(title = "ICU Length of Stay by Delirium Status",
+       x = "Delirium Status",
+       y = "ICU Length of Stay (Days)") +
+  geom_hline(aes(yintercept = p99_los), color = "blue", linetype = "dashed", size = 1) +
+  geom_text(aes(x = 1.5, y = p99_los, label = sprintf("P99 = %.2f (Count: %d, Proportion: %.2f%%)", p99_los, count_p99_los, 100 * proportion_p99_los)),
+            vjust = -0.5, hjust = 0.5, color = "blue", size = 3) +  # Correct variable and adjusted positions
+  stat_summary(fun = quantile, fun.args = list(probs = c(0.5)), geom = "text", 
+               aes(label = round(..y.., 1)), vjust = -0.5, hjust = 2, size = 3, color = "black")
+
+# Statistical Test
+t.test(icu_length_of_stay_day ~ delirium_status, data = data_mod)
+
+```
+
+### Box Plot of Propofol Duration by Delirium Status
+
+The boxplot in Figure shows that ARDS patients with delirium have a higher median propofol duration, indicating a possible association with increased delirium incidence. This group also displays a taller box, signifying greater variability in propofol duration and suggesting that the relationship between propofol use and delirium may be influenced by patient-specific factors such as pre-existing health conditions, response to sedation, and ARDS severity. Additionally, numerous outliers above the whiskers in both groups indicate that some patients received exceptionally long propofol durations, warranting further investigation into their specific circumstances.
+
+```{r propofol-Delirium}
+### Box Plot of Propofol Duration by Delirium Status
+
+ggplot(data_mod, aes(x = delirium_status, y = duration_hours, fill = delirium_status)) +
+  geom_boxplot() +
+  labs(title = "Propofol Infusion Duration by Delirium Status", x = "Delirium Status", y = "Propofol Infusion Duration (Hours)") +
+  geom_hline(aes(yintercept = p99_duration), color = "blue", linetype = "dashed", size = 1) +
+  geom_text(aes(x = 1.5, y = p99_duration, label = sprintf("P99 = %.2f (Count: %d, Proportion: %.2f%%)", p99_duration, count_p99_duration, 100 * proportion_p99_duration)),
+            vjust = -0.5, hjust = 0.5, color = "blue", size = 3)+  # Adjusted vjust and hjust for better positioning
+  stat_summary(fun = quantile, fun.args = list(probs = c(0.5)), geom = "text", aes(label = round(..y.., 1)), vjust = -0.5, hjust = 2, size = 3, color = "black")
+
+# Statistical Test
+t.test(duration_hours ~ delirium_status, data = data_mod)
+
+```
+
+### Scatter Plots of Propofol Duration vs. APACHE III Score
+
+Severity of illness may influence the duration of propofol use. The scatterplot in Figure shows a positive, upward-sloping regression line, indicating that higher APACHE III scores correlate with longer propofol infusions, suggesting sicker patients may require extended sedation. The data points, both tightly clustered and widely scattered, demonstrate a linear relationship and variability among patients with similar scores, indicating other factors also influence propofol usage. Most delirium cases (red points) cluster at higher durations and scores, suggesting prolonged sedation and severity may increase delirium risk. A logarithmic transformation normalises the skewed distributions of both propofol duration and APACHE III scores, reducing outlier impact.
+
+```{r propofol-apache}
+### Scatter Plot of Propofol Duration vs. APACHE III Score
+
+# Scatter plot with regression line
+ggplot(data_mod, aes(x = apsiii_score, y = duration_hours)) +
+  geom_point(aes(color = delirium_status), alpha = 0.6) +  # Points colored by delirium status
+  geom_smooth(method = "lm", color = "blue", se = FALSE) + # Linear regression line
+  labs(title = "Scatter Plot of Propofol Duration vs. APACHE III Score",
+       x = "APACHE III Score",
+       y = "Propofol Infusion Duration (Hours)") +
+  theme_minimal()
+
+# Scatter plot with regression line (with Log)
+ggplot(data_mod, aes(x = apsiii_score, y = duration_hours)) +
+  geom_point(aes(color = delirium_status), alpha = 0.6) +  # Points colored by delirium status
+  geom_smooth(method = "lm", color = "blue", se = FALSE) + # Linear regression line
+  labs(title = "Scatter Plot of Propofol Duration vs. APACHE III Score",
+       x = "APACHE III Score",
+       y = "Propofol Infusion Duration (Hours)") +
+  scale_y_log10()+
+  scale_x_log10()+
+  theme_minimal()
+
+```
+
+## _____________________________________________
+
+## Un-used Charts
+
+### Density Plot of Propofol Duration (Un-used)
+
+```{r propofol-density}
+### Density Plot of Propofol Duration (Un-used)
+
+ggplot(data_mod, aes(x=duration_hours, fill=delirium_status)) +
+  geom_density(alpha=0.5) +
+  labs(title="Density Plot of Propofol Duration by Delirium Status", x="Duration in Hours", y="Density")
+
+```
+
+### Box Plot APACHE III Score by Delirium Status (Un-used)
+
+```{r apache-delirium}
+### Box Plot APACHE III Score by Delirium Status (Un-used)
+
+# Calculate the 99th percentile of apsiii
+p99_apsiii <- quantile(data_mod$apsiii_score, 0.99)
+
+# Calculate count and proportion of apsiii >= P99
+count_p99_apsiii <- sum(data_mod$apsiii_score >= p99_apsiii)
+proportion_p99_apsiii <- count_p99_apsiii / nrow(data_mod)
+
+ggplot(data_mod, aes(x = delirium_status, y = apsiii_score, fill = delirium_status)) +
+  geom_boxplot() +
+  labs(title = "APACHE III Score by Delirium Status", x = "Delirium Status", y = "APACHE III Score") +
+  geom_hline(aes(yintercept = p99_apsiii), color = "blue", linetype = "dashed", size = 1) +
+  geom_text(aes(x = 1.5, y = p99_apsiii, label = sprintf("P99 = %d (Count: %d, Proportion: %.2f%%)", p99_apsiii, count_p99_apsiii, 100 * proportion_p99_apsiii)),
+            vjust = -0.5, hjust = 0.5, color = "blue", size = 3) +  # Correct variable and adjusted positions
+  stat_summary(fun = quantile, fun.args = list(probs = c(0.5)), geom = "text", 
+               aes(label = round(..y.., 1)), vjust = -0.5, hjust = 2, size = 3, color = "black")
+
+# Statistical Test
+t.test(apsiii_score ~ delirium_status, data = data_mod)
+
+```
+
+### Scatter Plot of Propofol Duration vs. Age (Un-used)
+
+```{r propofol-age}
+### Scatter Plot of Propofol Duration vs. Age (Un-used)
+
+ggplot(data_mod, aes(x=age, y=duration_hours)) +
+  geom_point(aes(color=delirium_status), alpha=0.5) +
+  geom_smooth(method = "lm", se = FALSE, color="black") +  # Add a LOESS smoothing line without the confidence interval shaded
+  labs(title="Scatter Plot of Propofol Duration vs. Age", x="Age", y="Propofol Infusion Duration (Hours)") +
+  scale_color_manual(values=c("Delirium"="red", "Non-delirium"="blue")) +
+  #scale_x_log10() +
+  scale_y_log10() +  # Logarithmic transformation on the y-axis
+  theme_minimal()
+
+```
+
+## The End
