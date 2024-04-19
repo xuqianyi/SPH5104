@@ -11,7 +11,7 @@ final dataset: cohort_w_confounders.csv.
 ## Load Libraries
 
 ``` r
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
 ```
 
@@ -36,16 +36,6 @@ library(skimr)
 ### Read final dataset
 data <- read_csv("D:\\cohort_w_confounders.csv")
 ```
-
-    ## Rows: 3862 Columns: 40
-    ## ── Column specification ────────────────────────────────────────────────────────
-    ## Delimiter: ","
-    ## chr  (5): gender, admission_type, insurance, marital_status, race
-    ## dbl (34): delirium, duration_hours, subject_id, hadm_id, stay_id, icu_length...
-    ## lgl  (1): sepsis3
-    ## 
-    ## ℹ Use `spec()` to retrieve the full column specification for this data.
-    ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 
 ## Descriptive Data
 
@@ -174,9 +164,6 @@ ggplot(data_pie, aes(x = "", y = prop, fill = delirium_status)) +
   geom_text(aes(label = paste(count, sprintf("(%.1f%%)", prop))), position = position_stack(vjust = 0.5))  # Adds text labels with count and percentage
 ```
 
-    ## Don't know how to automatically pick scale for object of type <table>.
-    ## Defaulting to continuous.
-
 ![](descriptive-bivariate_oyy_files/figure-gfm/delirium-piechart-1.png)<!-- -->
 
 ### Histogram of Propofol Infusion Duration
@@ -212,15 +199,6 @@ ggplot(data_mod, aes(x = duration_hours)) +
             label = sprintf("P99 = %.2f (Count: %d, Proportion: %.2f%%)", p99_duration, count_p99_duration, 100 * proportion_p99_duration),
             vjust = 1.5, hjust = -0.01, color = "blue", size = 3)  # Add text label for P99 with count and proportion
 ```
-
-    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
-    ## ℹ Please use `linewidth` instead.
-    ## This warning is displayed once every 8 hours.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
-
-    ## Warning in geom_text(aes(x = p99_duration, y = Inf), label = sprintf("P99 = %.2f (Count: %d, Proportion: %.2f%%)", : All aesthetics have length 1, but the data has 3862 rows.
-    ## ℹ Did you mean to use `annotate()`?
 
 ![](descriptive-bivariate_oyy_files/figure-gfm/propofol-histogram-1.png)<!-- -->
 
@@ -269,12 +247,6 @@ ggplot(data_mod, aes(x = delirium_status, y = age, fill = delirium_status)) +
   stat_summary(fun = median, geom = "text", aes(label = round(..y.., 1)), vjust = -0.5, hjust = 2, size = 3, color = "black") +
   stat_summary(fun = quantile, fun.args = list(probs = c(0.25, 0.75)), geom = "text", aes(label = round(..y.., 1)), vjust = -0.5, hjust = 2, size = 3, color = "black")
 ```
-
-    ## Warning: The dot-dot notation (`..y..`) was deprecated in ggplot2 3.4.0.
-    ## ℹ Please use `after_stat(y)` instead.
-    ## This warning is displayed once every 8 hours.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
 
 ![](descriptive-bivariate_oyy_files/figure-gfm/Age-Delirium-1.png)<!-- -->
 
@@ -325,9 +297,6 @@ ggplot(data_mod, aes(x = delirium_status, y = icu_length_of_stay_day)) +
   stat_summary(fun = quantile, fun.args = list(probs = c(0.5)), geom = "text", 
                aes(label = round(..y.., 1)), vjust = -0.5, hjust = 2, size = 3, color = "black")
 ```
-
-    ## Warning in geom_text(aes(x = 1.5, y = p99_los, label = sprintf("P99 = %.2f (Count: %d, Proportion: %.2f%%)", : All aesthetics have length 1, but the data has 3862 rows.
-    ## ℹ Did you mean to use `annotate()`?
 
 ![](descriptive-bivariate_oyy_files/figure-gfm/icu-Delirium-1.png)<!-- -->
 
@@ -419,8 +388,6 @@ ggplot(data_mod, aes(x = apsiii_score, y = duration_hours)) +
   theme_minimal()
 ```
 
-    ## `geom_smooth()` using formula = 'y ~ x'
-
 ![](descriptive-bivariate_oyy_files/figure-gfm/propofol-apache-1.png)<!-- -->
 
 ``` r
@@ -435,8 +402,6 @@ ggplot(data_mod, aes(x = apsiii_score, y = duration_hours)) +
   scale_x_log10()+
   theme_minimal()
 ```
-
-    ## `geom_smooth()` using formula = 'y ~ x'
 
 ![](descriptive-bivariate_oyy_files/figure-gfm/propofol-apache-2.png)<!-- -->
 
@@ -511,8 +476,6 @@ ggplot(data_mod, aes(x=age, y=duration_hours)) +
   scale_y_log10() +  # Logarithmic transformation on the y-axis
   theme_minimal()
 ```
-
-    ## `geom_smooth()` using formula = 'y ~ x'
 
 ![](descriptive-bivariate_oyy_files/figure-gfm/propofol-age-1.png)<!-- -->
 
